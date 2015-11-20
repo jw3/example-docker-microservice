@@ -8,8 +8,6 @@ licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
 scalaVersion := "2.11.7"
 scalacOptions += "-target:jvm-1.8"
 
-resolvers += "jw3 at bintray" at "https://dl.bintray.com/jw3/maven"
-
 libraryDependencies ++= {
     val akkaVersion = "2.4.0"
     val akkaStreamVersion = "1.0"
@@ -46,10 +44,19 @@ dockerfile in docker := {
         from("java:8")
         add(artifact, artifactTargetPath)
         copy(artifact, artifactTargetPath)
-        expose(2222)
+        expose(2222)  // todo; read port from app.config
         entryPoint("java", "-jar", artifactTargetPath)
     }
 }
+
+val dockerWrite = taskKey[Unit]("Write the Docker file")
+dockerWrite <<= dockerWrite.dependsOn(compile in Compile, dockerfile in docker)
+dockerWrite := {
+    val dockerDir = target.value / "docker"
+    val dockerFile = (dockerfile in docker).value
+    IO.write(dockerDir / "Dockerfile", sbtdocker.staging.DefaultDockerfileProcessor(dockerFile, dockerDir).instructionsString)
+}
+
 
 mainClass in assembly := Option("simple.Bootstrap")
 test in assembly := {}
@@ -60,3 +67,25 @@ assemblyMergeStrategy in assembly := {
     case "reference.conf" => MergeStrategy.concat
     case _ => MergeStrategy.first
 }
+
+
+// artifact repo config
+
+val host = sys.env.getOrElse("ARTIFACT_REPO_HOST", "localhost")
+val port = sys.env.getOrElse("ARTIFACT_REPO_PORT", "8081")
+val repo = s"http://$host:$port/artifactory"
+val user = sys.env.getOrElse("ARTIFACT_REPO_USER", "admin")
+val pass = sys.env.getOrElse("ARTIFACT_REPO_PASS", "")
+
+resolvers += "jw3 at bintray" at "https://dl.bintray.com/jw3/maven"
+resolvers += "Artifactory Realm" at s"$repo/libs-snapshot-local/"
+credentials += Credentials("Artifactory Realm", host, user, pass)
+
+publishTo := {
+    if (isSnapshot.value)
+        Some("Artifactory Realm" at s"$repo/libs-snapshot-local;build.timestamp=" + new java.util.Date().getTime)
+    else
+        Some("Artifactory Realm" at s"$repo/libs-release-local")
+}
+
+publishMavenStyle := true
