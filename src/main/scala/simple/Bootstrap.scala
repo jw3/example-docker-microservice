@@ -9,6 +9,7 @@ import wiii.awa.WebApi
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import scala.util.Random
 
 /**
  *
@@ -16,7 +17,7 @@ import scala.concurrent.duration.Duration
 object Bootstrap extends App with WebApi with LazyLogging {
     implicit val actorSystem: ActorSystem = ActorSystem("ServiceB")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
-    override def config: Option[Config] = Option(ConfigFactory.parseString("webapi.port=2222,webapi.host=0.0.0.0"))
+    override def config: Option[Config] = Option(actorSystem.settings.config)
 
     val math =
         (get & pathPrefix("math")) {
@@ -25,8 +26,20 @@ object Bootstrap extends App with WebApi with LazyLogging {
             }
         }
 
+    val rand =
+        (get & pathPrefix("random")) {
+            path("int") {
+                complete( s"""{"result":"${Random.nextInt}"}""")
+            } ~
+            path("posint" / IntNumber) { (u) =>
+                val num = Random.nextInt(u - 1) + 1
+                complete( s"""{"result":"$num"}""")
+            }
+        }
+
+
     logger.info("starting Service")
-    webstart(math)
+    webstart(math ~ rand)
 
     Await.ready(actorSystem.whenTerminated, Duration.Inf)
 }
