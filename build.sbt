@@ -42,7 +42,6 @@ dockerfile in docker := {
     val artifactTargetPath = s"/app/${artifact.name}"
     new sbtdocker.mutable.Dockerfile {
         from("java:8")
-        add(artifact, artifactTargetPath)
         copy(artifact, artifactTargetPath)
         expose(2222)  // todo; read port from app.config
         entryPoint("java", "-jar", artifactTargetPath)
