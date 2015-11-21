@@ -43,17 +43,19 @@ dockerfile in docker := {
     new sbtdocker.mutable.Dockerfile {
         from("java:8")
         copy(artifact, artifactTargetPath)
-        expose(2222)  // todo; read port from app.config
+        expose(2222) // todo; read port from app.config
         entryPoint("java", "-jar", artifactTargetPath)
     }
 }
 
-val dockerWrite = taskKey[Unit]("Write the Docker file")
-dockerWrite <<= dockerWrite.dependsOn(compile in Compile, dockerfile in docker)
-dockerWrite := {
+val dockerStage = taskKey[Unit]("Create and populate the Docker staging directory")
+dockerStage <<= dockerStage.dependsOn(compile in Compile, dockerfile in docker)
+dockerStage := {
     val dockerDir = target.value / "docker"
     val dockerFile = (dockerfile in docker).value
-    IO.write(dockerDir / "Dockerfile", sbtdocker.staging.DefaultDockerfileProcessor(dockerFile, dockerDir).instructionsString)
+    val processor = sbtdocker.staging.DefaultDockerfileProcessor(dockerFile, dockerDir)
+    IO.write(dockerDir / "Dockerfile", processor.instructionsString)
+    processor.stageFiles.foreach(t => t._1.stage(t._2))
 }
 
 
