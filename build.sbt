@@ -18,6 +18,8 @@ libraryDependencies ++= {
         "io.spray" %% "spray-json" % "1.3.2",
         "com.typesafe" % "config" % "1.3.0",
         "net.ceedubs" %% "ficus" % "1.1.2",
+        "org.twitter4j" % "twitter4j-core" % "4.0.4",
+        "org.twitter4j" % "twitter4j-stream" % "4.0.4",
 
         "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
         "ch.qos.logback" % "logback-classic" % "1.1.3",
@@ -70,23 +72,23 @@ assemblyMergeStrategy in assembly := {
 }
 
 
-// artifact repo config
-
-val host = sys.env.getOrElse("ARTIFACT_REPO_HOST", "localhost")
-val port = sys.env.getOrElse("ARTIFACT_REPO_PORT", "8081")
-val repo = s"http://$host:$port/artifactory"
-val user = sys.env.getOrElse("ARTIFACT_REPO_USER", "admin")
-val pass = sys.env.getOrElse("ARTIFACT_REPO_PASS", "")
-
 resolvers += "jw3 at bintray" at "https://dl.bintray.com/jw3/maven"
-resolvers += "Artifactory Realm" at s"$repo/libs-snapshot-local/"
-credentials += Credentials("Artifactory Realm", host, user, pass)
 
-publishTo := {
-    if (isSnapshot.value)
-        Some("Artifactory Realm" at s"$repo/libs-snapshot-local;build.timestamp=" + new java.util.Date().getTime)
-    else
-        Some("Artifactory Realm" at s"$repo/libs-release-local")
-}
+// artifact repo config
+//val host = sys.env.getOrElse("ARTIFACT_REPO_HOST", "localhost")
+//val port = sys.env.getOrElse("ARTIFACT_REPO_PORT", "8081")
+//val repo = s"http://$host:$port/artifactory"
+//val user = sys.env.getOrElse("ARTIFACT_REPO_USER", "admin")
+//val pass = sys.env.getOrElse("ARTIFACT_REPO_PASS", "")
+//
+//resolvers += "Artifactory Realm" at s"$repo/libs-snapshot-local/"
+//credentials += Credentials("Artifactory Realm", host, user, pass)
+//
+//publishTo := {
+//    if (isSnapshot.value)
+//        Some("Artifactory Realm" at s"$repo/libs-snapshot-local;build.timestamp=" + new java.util.Date().getTime)
+//    else
+//        Some("Artifactory Realm" at s"$repo/libs-release-local")
+//}
 
 publishMavenStyle := true
