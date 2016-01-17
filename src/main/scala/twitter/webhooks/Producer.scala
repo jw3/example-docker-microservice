@@ -1,4 +1,4 @@
-package twitter
+package twitter.webhooks
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer

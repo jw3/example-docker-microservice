@@ -1,4 +1,4 @@
-package kafka.feedread
+package twitter.kafka
 
 import java.util
 
@@ -8,9 +8,9 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import com.softwaremill.react.kafka.{ProducerMessage, ProducerProperties, ReactiveKafka}
 import com.typesafe.scalalogging.LazyLogging
-import kafka.feedread.PrivateFeedToKafka._
 import org.apache.kafka.common.serialization.{Deserializer, Serializer}
 import spray.json.{DefaultJsonProtocol, _}
+import twitter.kafka.PrivateFeedToKafka.{Tweet, TweetSerializer}
 import twitter4j.{Status, _}
 
 import scala.concurrent.Await
@@ -57,7 +57,7 @@ class StatusForwarder(publisher: ActorRef) extends StatusListener {
     def onException(ex: Exception): Unit = {}
 }
 
-private[feedread] object PrivateFeedToKafka {
+private[kafka] object PrivateFeedToKafka {
     case class Tweet(user: String, text: String)
 
     object TweetProtocol extends DefaultJsonProtocol {
@@ -65,7 +65,7 @@ private[feedread] object PrivateFeedToKafka {
     }
 
     object TweetSerializer extends Serializer[Tweet] {
-        import kafka.feedread.PrivateFeedToKafka.TweetProtocol._
+        import TweetProtocol._
 
         override def serialize(s: String, t: Tweet): Array[Byte] =
             t.toJson.compactPrint.getBytes("UTF-8")
@@ -75,7 +75,7 @@ private[feedread] object PrivateFeedToKafka {
     }
 
     object TweetDeserializer extends Deserializer[Tweet] {
-        import kafka.feedread.PrivateFeedToKafka.TweetProtocol._
+        import TweetProtocol._
 
         override def deserialize(s: String, bytes: Array[Byte]): Tweet =
             new String(bytes, "UTF-8").parseJson.convertTo[Tweet]
