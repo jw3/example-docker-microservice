@@ -1,4 +1,4 @@
-package simple
+package main.scala.simple
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives._
