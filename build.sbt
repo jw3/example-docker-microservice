@@ -1,6 +1,4 @@
-import sbt.Keys._
-
-enablePlugins(DockerPlugin)
+enablePlugins(JavaAppPackaging)
 
 lazy val commonSettings = Seq(
     organization := "com.github.jw3.examples",
@@ -9,6 +7,9 @@ lazy val commonSettings = Seq(
     resolvers += "jw3 at bintray" at "https://dl.bintray.com/jw3/maven",
     licenses +=("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0")),
     publishMavenStyle := true,
+
+    dockerBaseImage := "anapsix/alpine-java:jre8",
+    dockerExposedPorts := Seq(8080, 8088),
 
     libraryDependencies ++= {
         val akkaVersion = "2.4.1"
@@ -48,43 +49,19 @@ lazy val basic = project.in(file("basic-service")).
                  settings(commonSettings: _*).
                  settings(
                      mainClass in assembly := Option("simple.Bootstrap")
-                 ).enablePlugins(DockerPlugin)
+                 ).enablePlugins(JavaAppPackaging)
 
 lazy val twitter_kafka = project.in(file("twitter-kafka")).
                          settings(commonSettings: _*).
                          settings(
                              mainClass in assembly := Option("twitter.kafka.FeedToKafka")
-                         ).enablePlugins(DockerPlugin)
+                         ).enablePlugins(JavaAppPackaging)
 
 lazy val twitter_webhooks = project.in(file("twitter-webhooks")).
                             settings(commonSettings: _*).
                             settings(
                                 mainClass in assembly := Option("twitter.webhooks.Producer")
-                            ).enablePlugins(DockerPlugin)
-
-
-
-docker <<= (docker dependsOn assembly)
-dockerfile in docker := {
-    val artifact = assemblyOutputPath in assembly value
-    val artifactTargetPath = s"/app/${artifact.name}"
-    new sbtdocker.mutable.Dockerfile {
-        from("anapsix/alpine-java:jre8")
-        copy(artifact, artifactTargetPath)
-        expose(8080) // todo; read port from app.config
-        entryPoint("java", "-jar", artifactTargetPath)
-    }
-}
-
-val dockerStage = taskKey[Unit]("Create and populate the Docker staging directory")
-dockerStage <<= dockerStage.dependsOn(compile in Compile, dockerfile in docker)
-dockerStage := {
-    val dockerDir = target.value / "docker"
-    val dockerFile = (dockerfile in docker).value
-    val processor = sbtdocker.staging.DefaultDockerfileProcessor(dockerFile, dockerDir)
-    IO.write(dockerDir / "Dockerfile", processor.instructionsString)
-    processor.stageFiles.foreach(t => t._1.stage(t._2))
-}
+                            ).enablePlugins(JavaAppPackaging)
 
 test in assembly := {}
 assembleArtifact in assemblyPackageScala := true
@@ -94,9 +71,6 @@ assemblyMergeStrategy in assembly := {
     case "reference.conf" => MergeStrategy.concat
     case _ => MergeStrategy.first
 }
-
-
-
 
 // artifact repo config
 //val host = sys.env.getOrElse("ARTIFACT_REPO_HOST", "localhost")
