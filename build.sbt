@@ -1,4 +1,5 @@
 import sbt.Keys._
+
 enablePlugins(DockerPlugin)
 
 lazy val commonSettings = Seq(
@@ -41,23 +42,25 @@ lazy val commonSettings = Seq(
     }
 )
 
+lazy val root = project.in(file(".")).aggregate(basic, twitter_kafka, twitter_webhooks)
+
 lazy val basic = project.in(file("basic-service")).
-                settings(commonSettings: _*).
-                settings(
-                    // other settings
-                )
+                 settings(commonSettings: _*).
+                 settings(
+                     mainClass in assembly := Option("simple.Bootstrap")
+                 ).enablePlugins(DockerPlugin)
 
 lazy val twitter_kafka = project.in(file("twitter-kafka")).
-                settings(commonSettings: _*).
-                settings(
-                    // other settings
-                )
-
-lazy val twitter_webhooks = project.in(file("twitter-webhooks")).
                          settings(commonSettings: _*).
                          settings(
-                             // other settings
-                         )
+                             mainClass in assembly := Option("twitter.kafka.FeedToKafka")
+                         ).enablePlugins(DockerPlugin)
+
+lazy val twitter_webhooks = project.in(file("twitter-webhooks")).
+                            settings(commonSettings: _*).
+                            settings(
+                                mainClass in assembly := Option("twitter.webhooks.Producer")
+                            ).enablePlugins(DockerPlugin)
 
 
 
@@ -66,9 +69,9 @@ dockerfile in docker := {
     val artifact = assemblyOutputPath in assembly value
     val artifactTargetPath = s"/app/${artifact.name}"
     new sbtdocker.mutable.Dockerfile {
-        from("java:8")
+        from("anapsix/alpine-java:jre8")
         copy(artifact, artifactTargetPath)
-        expose(2222) // todo; read port from app.config
+        expose(8080) // todo; read port from app.config
         entryPoint("java", "-jar", artifactTargetPath)
     }
 }
@@ -83,8 +86,6 @@ dockerStage := {
     processor.stageFiles.foreach(t => t._1.stage(t._2))
 }
 
-
-mainClass in assembly := Option("simple.Bootstrap")
 test in assembly := {}
 assembleArtifact in assemblyPackageScala := true
 assemblyMergeStrategy in assembly := {
