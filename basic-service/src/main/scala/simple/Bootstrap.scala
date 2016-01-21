@@ -1,9 +1,12 @@
 package main.scala.simple
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
-import com.typesafe.config.{Config, ConfigFactory}
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import wiii.awa.WebApi
 
@@ -12,10 +15,10 @@ import scala.concurrent.duration.Duration
 import scala.util.Random
 
 /**
- *
+ * Basic demonstration of AkkaHTTP with the Actor [[WebApi]]
  */
 object Bootstrap extends App with WebApi with LazyLogging {
-    implicit val actorSystem: ActorSystem = ActorSystem("ServiceB")
+    implicit val actorSystem: ActorSystem = ActorSystem("SimpleService")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     override def config: Option[Config] = Option(actorSystem.settings.config)
 
@@ -34,6 +37,12 @@ object Bootstrap extends App with WebApi with LazyLogging {
             path("posint" / IntNumber) { (u) =>
                 val num = Random.nextInt(u - 1) + 1
                 complete( s"""{"result":"$num"}""")
+            } ~
+            path("bytes" / IntNumber) { (sz) =>
+                complete {
+                    val source = Source(random(sz)).map(x => ByteString(x.getBytes))
+                    HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`application/octet-stream`, source))
+                }
             }
         }
 
@@ -42,4 +51,6 @@ object Bootstrap extends App with WebApi with LazyLogging {
     webstart(math ~ rand)
 
     Await.ready(actorSystem.whenTerminated, Duration.Inf)
+
+    def random(sz: Int) = scala.collection.immutable.Seq.fill(sz)(Random.nextString(1))
 }
