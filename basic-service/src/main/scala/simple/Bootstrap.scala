@@ -1,6 +1,7 @@
 package main.scala.simple
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.HttpEntity.{ChunkStreamPart, Chunked}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
@@ -40,8 +41,8 @@ object Bootstrap extends App with WebApi with LazyLogging {
             } ~
             path("bytes" / IntNumber) { (sz) =>
                 complete {
-                    val source = Source(random(sz)).map(x => ByteString(x.getBytes))
-                    HttpResponse(entity = HttpEntity.Chunked.fromData(ContentTypes.`application/octet-stream`, source))
+                    val source = Source(random(sz)).map(ChunkStreamPart(_))
+                    HttpResponse(entity = Chunked(ContentTypes.`application/octet-stream`, source))
                 }
             }
         }
